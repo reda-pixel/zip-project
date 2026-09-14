@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conduit - RealWorld Social Blogging Platform</title>
+  
+  <!-- Conduit Theme & Ionicons -->
+  <link href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://fonts.googleapis.com/css?family=Titillium+Web:700|Source+Serif+Pro:400,700|Merriweather+Sans:400,700|Source+Sans+Pro:300,400,600,700,300italic,400italic,600italic,700italic" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://demo.productionready.io/main.css" />
+  
+  <!-- React & Libraries -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Source Sans Pro', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #root {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    main {
+      flex: 1;
+    }
+    .tag-pill {
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+    .tag-pill:hover {
+      background-color: #687077 !important;
+      color: #fff !important;
+    }
+    .tag-pill i {
+      margin-left: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .page-link {
+      cursor: pointer;
+    }
+    .banner {
+      box-shadow: inset 0 8px 8px -8px rgba(0, 0, 0, 0.3), inset 0 -8px 8px -8px rgba(0, 0, 0, 0.3);
+    }
+    .article-preview {
+      border-top: 1px solid rgba(0,0,0,0.1);
+      padding: 1.5rem 0;
+    }
+    .preview-link {
+      color: inherit !important;
+      text-decoration: none !important;
+      display: block;
+    }
+    .preview-link:hover h1 {
+      color: #5cb85c;
+    }
+    .preview-link p {
+      font-weight: 300;
+      color: #999;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      line-height: 1.3rem;
+    }
+    .preview-link span {
+      max-width: 30%;
+      font-size: 0.8rem;
+      font-weight: 300;
+      color: #bbb;
+      vertical-align: middle;
+    }
+    .comment-form .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .auth-banner-hint {
+      background: #fdf7e3;
+      border: 1px solid #faebcc;
+      color: #8a6d3b;
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+    .demo-badge {
+      display: inline-block;
+      background: #5cb85c;
+      color: white;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 8px;
+      vertical-align: middle;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+    .error-messages {
+      color: #b85c5c;
+      font-weight: bold;
+      list-style-type: disc;
+      padding-left: 20px;
+    }
+    .custom-avatar {
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Real Application Code compiled by Babel -->
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useMemo, createContext, useContext, useRef } = React;
+
+    // --- DATABASE & PERSISTENT STORAGE ENGINE ---
+    const DB_KEY = 'conduit_realworld_db';
+    const JWT_KEY = 'jwtToken';
+
+    const initialSeedData = {
+      users: [
+        {
+          id: 'u-1',
+          username: 'anisa_dev',
+          email: 'anisa@example.com',
+          password: 'password123',
+          bio: 'Full-stack software architect, open-source enthusiast and tech writer.',
+          image: 'https://api.realworld.io/images/smiley-cyrus.jpeg',
+          token: 'token-anisa-12345',
+          following: []
+        },
+        {
+          id: 'u-2',
+          username: 'gerome_code',
+          email: 'gerome@example.com',
+          password: 'password123',
+          bio: 'Frontend craftsman specializing in React, TypeScript and Web Performance.',
+          image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          token: 'token-gerome-67890',
+          following: ['anisa_dev']
+        },
+        {
+          id: 'u-3',
+          username: 'test-user-1',
+          email: 'test@test.com',
+          password: 'password',
+          bio: 'Demo account for exploring Conduit features.',
+          image: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+          token: 'token-testuser-11111',
+          following: ['anisa_dev']
+        }
+      ],
+      tags: [
+        'react', 'javascript', 'webdev', 'frontend', 'architecture', 'vite', 'performance', 'css'
+      ],
+      articles: [
+        {
+          id: 'art-1',
+          slug: 'mastering-modern-react-patterns-2025',
+          title: 'Mastering Modern React Architecture & State Workflows',
+          description: 'A comprehensive guide on composing scalable state systems, clean UI boundaries, and reactive primitives.',
+          body: `React continues to evolve at a blistering pace. With modern primitives, concurrent features, and decoupled rendering pipelines, engineering large-scale single page apps has reached new levels of elegance.\n\n### Key Highlights\n1. **Primacy of Immutable State**: Valtio, Redux Toolkit, and pure state snapshots ensure zero teardown cost.\n2. **Component Granularity**: Keep rendering boundaries focused and colocated with business mutations.\n3. **Resilient Data Caching**: Offline persistence layer and optimistic UI mutations create instant responses for end users.\n\nEmbrace functional modularity and elevate your user experiences!`,
+          tagList: ['react', 'javascript', 'frontend', 'architecture'],
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+          updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+          authorUsername: 'anisa_dev',
+          favorites: ['u-2', 'u-3']
+        },
+        {
+          id: 'art-2',
+          slug: 'lightning-fast-bundling-with-vite',
+          title: 'Lightning Fast Bundling & Next-Gen Tooling',
+          description: 'Why ES modules and lightning-fast HMR make modern web development joyous again.',
+          body: `Gone are the days of waiting several minutes for cold server restarts and monolithic chunk bundling. Modern build systems leverage native browser ES module imports during development.\n\n### Why it matters:\n- **Instant Server Start**: No pre-bundling delay before boot.\n- **Lightning HMR**: Edits reflect in milliseconds regardless of project size.\n- **Optimized Production Rollup Builds**: Tree-shaking and automated CSS code splitting out of the box.\n\nStart your next project with modern tooling and never look back.`,
+          tagList: ['vite', 'webdev', 'performance'],
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
+          updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
+          authorUsername: 'gerome_code',
+          favorites: ['u-1']
+        },
+        {
+          id: 'art-3',
+          slug: 'crafting-accessible-web-interfaces',
+          title: 'Crafting Inclusive and Accessible Web Experiences',
+          description: 'Best practices for semantic HTML, keyboard navigation, color contrast, and assistive tech support.',
+          body: `Web accessibility is not an afterthought or an optional checklist—it is the foundational standard of high quality software engineering.\n\nBy prioritizing semantic elements, standard ARIA landmarks, focus traps for dialogs, and legible typographic scales, we build a web that welcomes everyone.\n\nRemember: when you make your software accessible for disabled users, you improve clarity and ergonomics for all users.`,
+          tagList: ['webdev', 'css', 'frontend'],
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
+          updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
+          authorUsername: 'anisa_dev',
+          favorites: ['u-3']
+        }
+      ],
+      comments: [
+        {
+          id: 'c-1',
+          articleSlug: 'mastering-modern-react-patterns-2025',
+          body: 'Phenomenal breakdown! The section on reactive primitives and isolated state mutation is spot on.',
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
+          authorUsername: 'gerome_code'
+        },
+        {
+          id: 'c-2',
+          articleSlug: 'mastering-modern-react-patterns-2025',
+          body: 'Thanks for writing this! Looking forward to applying these caching patterns in our production stack.',
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+          authorUsername: 'test-user-1'
+        },
+        {
+          id: 'c-3',
+          articleSlug: 'lightning-fast-bundling-with-vite',
+          body: 'Completely agree. The dev loop speedup changed how we iterate on design systems completely.',
+          createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+          authorUsername: 'anisa_dev'
+        }
+      ]
+    };
+
+    function loadDB() {
+      try {
+        const data = localStorage.getItem(DB_KEY);
+        if (data) return JSON.parse(data);
+      } catch (e) {
+        console.error('Failed to load DB from localStorage', e);
+      }
+      saveDB(initialSeedData);
+      return initialSeedData;
+    }
+
+    function saveDB(db) {
+      try {
+        localStorage.setItem(DB_KEY, JSON.stringify(db));
+      } catch (e) {
+        console.error('Failed to save DB to localStorage', e);
+      }
+    }
+
+    // --- DB OPERATIONS / API ENGINE ---
+    const API = {
+      getCurrentUser(token) {
+        if (!token) return null;
+        const db = loadDB();
+        const user = db.users.find(u => u.token === token);
+        if (!user) return null;
+        const { password, ...safeUser } = user;
+        return safeUser;
+      },
+      login(email, password) {
+        const db = loadDB();
+        const user = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (!user || user.password !== password) {
+          throw { status: 422, errors: { 'email or password': ['is invalid'] } };
+        }
+        const { password: _, ...safeUser } = user;
+        return safeUser;
+      },
+      register(username, email, password) {
+        const db = loadDB();
+        const existingEmail = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (existingEmail) {
+          throw { status: 422, errors: { email: ['has already been taken'] } };
+        }
+        const existingName = db.users.find(u => u.username.toLowerCase() === username.toLowerCase());
+        if (existingName) {
+          throw { status: 422, errors: { username: ['has already been taken'] } };
+        }
+        const newUser = {
+          id: 'u-' + Date.now(),
+          username,
+          email,
+          password,
+          bio: '',
+          image: 'https://api.realworld.io/images/smiley-cyrus.jpeg',
+          token: 'token-' + Date.now(),
+          following: []
+        };
+        db.users.push(newUser);
+        saveDB(db);
+        const { password: _, ...safeUser } = newUser;
+        return safeUser;
+      },
+      updateUser(token, updateData) {
+        const db = loadDB();
+        const index = db.users.findIndex(u => u.token === token);
+        if (index === -1) throw { status: 401, errors: { auth: ['is required'] } };
+        
+        const currentUser = db.users[index];
+        const updated = {
+          ...currentUser,
+          ...updateData,
+          password: updateData.password || currentUser.password
+        };
+        db.users[index] = updated;
+        saveDB(db);
+        const { password, ...safeUser } = updated;
+        return safeUser;
+      },
+      getProfile(username, currentUserId) {
+        const db = loadDB();
+        const user = db.users.find(u => u.username === username);
+        if (!user) throw { status: 404, errors: { profile: ['not found'] } };
+        const currentUser = currentUserId ? db.users.find(u => u.id === currentUserId) : null;
+        const following = currentUser ? (currentUser.following || []).includes(username) : false;
+        return {
+          username: user.username,
+          bio: user.bio,
+          image: user.image,
+          following
+        };
+      },
+      toggleFollowUser(targetUsername, currentUserId, follow) {
+        const db = loadDB();
+        const user = db.users.find(u => u.id === currentUserId);
+        if (!user) throw { status: 401, errors: { auth: ['required'] } };
+        
+        user.following = user.following || [];
+        if (follow && !user.following.includes(targetUsername)) {
+          user.following.push(targetUsername);
+        } else if (!follow) {
+          user.following = user.following.filter(name => name !== targetUsername);
+        }
+        saveDB(db);
+        return API.getProfile(targetUsername, currentUserId);
+      },
+      getTags() {
+        const db = loadDB();
+        return db.tags || [];
+      },
+      getArticles({ tag, author, favorited, feed, offset = 0, limit = 10 }, currentUserId) {
+        const db = loadDB();
+        let list = [...db.articles];
+        const currentUser = currentUserId ? db.users.find(u => u.id === currentUserId) : null;
+
+        if (feed && currentUser) {
+          const followings = currentUser.following || [];
+          list = list.filter(a => followings.includes(a.authorUsername));
+        }
+        if (tag) {
+          list = list.filter(a => a.tagList && a.tagList.includes(tag));
+        }
+        if (author) {
+          list = list.filter(a => a.authorUsername === author);
+        }
+        if (favorited) {
+          const targetFavUser = db.users.find(u => u.username === favorited);
+          if (targetFavUser) {
+            list = list.filter(a => (a.favorites || []).includes(targetFavUser.id));
+          } else {
+            list = [];
+          }
+        }
+
+        list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const articlesCount = list.length;
+        const paginated = list.slice(offset, offset + limit);
+
+        const formattedArticles = paginated.map(art => {
+          const authorUser = db.users.find(u => u.username === art.authorUsername) || {
+            username: art.authorUsername,
+            image: 'https://api.realworld.io/images/smiley-cyrus.jpeg',
+            bio: ''
+          };
+          const following = currentUser ? (currentUser.following || []).includes(authorUser.username) : false;
+          const favorited = currentUser ? (art.favorites || []).includes(currentUser.id) : false;
+
+          return {
+            slug: art.slug,
+            title: art.title,
+            description: art.description,
+            body: art.body,
+            tagList: art.tagList || [],
+            createdAt: art.createdAt,
+            updatedAt: art.updatedAt,
+            favorited,
+            favoritesCount: (art.favorites || []).length,
+            author: {
+              username: authorUser.username,
+              bio: authorUser.bio,
+              image: authorUser.image,
+              following
+            }
+          };
+        });
+
+        return { articles: formattedArticles, articlesCount };
+      },
+      getArticle(slug, currentUserId) {
+        const db = loadDB();
+        const art = db.articles.find(a => a.slug === slug);
+        if (!art) throw { status: 404, errors: { article: ['not found'] } };
+
+        const authorUser = db.users.find(u => u.username === art.authorUsername) || {
+          username: art.authorUsername,
+          image: 'https://api.realworld.io/images/smiley-cyrus.jpeg',
+          bio: ''
+        };
+        const currentUser = currentUserId ? db.users.find(u => u.id === currentUserId) : null;
+        const following = currentUser ? (currentUser.following || []).includes(authorUser.username) : false;
+        const favorited = currentUser ? (art.favorites || []).includes(currentUser.id) : false;
+
+        return {
+          slug: art.slug,
+          title: art.title,
+          description: art.description,
+          body: art.body,
+          tagList: art.tagList || [],
+          createdAt: art.createdAt,
+          updatedAt: art.updatedAt,
+          favorited,
+          favoritesCount: (art.favorites || []).length,
+          author: {
+            username: authorUser.username,
+            bio: authorUser.bio,
+            image: authorUser.image,
+            following
+          }
+        };
+      },
+      createArticle(articleData, currentUserId) {
+        const db = loadDB();
+        const user = db.users.find(u => u.id === currentUserId);
+        if (!user) throw { status: 401, errors: { auth: ['required'] } };
+
+        const baseSlug = articleData.title
+          .toLowerCase()
+          .replace(/[^\w ]+/g, '')
+          .replace(/ +/g, '-');
+        const slug = baseSlug + '-' + Math.random().toString(36).substring(2, 7);
+
+        const newArticle = {
+          id: 'art-' + Date.now(),
+          slug,
+          title: articleData.title,
+          description: articleData.description,
+          body: articleData.body,
+          tagList: articleData.tagList || [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          authorUsername: user.username,
+          favorites: []
+        };
+
+        db.articles.unshift(newArticle);
+
+        // Add any new tags
+        if (Array.isArray(newArticle.tagList)) {
+          newArticle.tagList.forEach(tag => {
+            if (tag && !db.tags.includes(tag)) {
+              db.tags.push(tag);
+            }
+          });
+        }
+
+        saveDB(db);
+        return API.getArticle(slug, currentUserId);
+      },
+      updateArticle(slug, articleData, currentUserId) {
+        const db = loadDB();
+        const index = db.articles.findIndex(a => a.slug === slug);
+        if (index === -1) throw { status: 404, errors: { article: ['not found'] } };
+
+        const user = db.users.find(u => u.id === currentUserId);
+        if (!user || user.username !== db.articles[index].authorUsername) {
+          throw { status: 403, errors: { auth: ['unauthorized'] } };
+        }
+
+        const updated = {
+          ...db.articles[index],
+          ...articleData,
+          updatedAt: new Date().toISOString()
+        };
+
+        db.articles[index] = updated;
+
+        if (Array.isArray(updated.tagList)) {
+          updated.tagList.forEach(tag => {
+            if (tag && !db.tags.includes(tag)) {
+              db.tags.push(tag);
+            }
+          });
+        }
+
+        saveDB(db);
+        return API.getArticle(slug, currentUserId);
+      },
+      deleteArticle(slug, currentUserId) {
+        const db = loadDB();
+        const index = db.articles.findIndex(a => a.slug === slug);
+        if (index === -1) return true;
+
+        const user = db.users.find(u => u.id === currentUserId);
+        if (!user || user.username !== db.articles[index].authorUsername) {
+          throw { status: 403, errors: { auth: ['unauthorized'] } };
+        }
+
+        db.articles.splice(index, 1);
+        db.comments = db.comments.filter(c => c.articleSlug !== slug);
+        saveDB(db);
+        return true;
+      },
+      toggleFavoriteArticle(slug, currentUserId, favorited) {
+        const db = loadDB();
+        const user = db.users.find(u => u.id === currentUserId);
+        if (!user) throw { status: 401, errors: { auth: ['required'] } };
+
+        const article = db.articles.find(a => a.slug === slug);
+        if (!article) throw { status: 404, errors: { article: ['not found'] } };
+
+        article.favorites = article.favorites || [];
+        if (favorited && !article.favorites.includes(user.id)) {
+          article.favorites.push(user.id);
+        } else if (!favorited) {
+          article.favorites = article.favorites.filter(id => id !== user.id);
+        }
+        saveDB(db);
+        return API.getArticle(slug, currentUserId);
+      },
+      getComments(slug) {
+        const db = loadDB();
+        const comments = db.comments.filter(c => c.articleSlug === slug);
+        comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        return comments.map(c => {
+          const authorUser = db.users.find(u => u.username === c.authorUsername) || {
+            username: c.authorUsername,
+            image: 'https://api.realworld.io/images/smiley-cyrus.jpeg',
+            bio: ''
+          };
+          return {
+            id: c.id,
+            body: c.body,
+            createdAt: c.createdAt,
+            author: {
+              username: authorUser.username,
+              bio: authorUser.bio,
+              image: authorUser.image,
+              following: false
+            }
+          };
+        });
+      },
+      addComment(slug, body, currentUserId) {
+        const db = loadDB();
+        const user = db.users.find(u => u.id === currentUserId);
+        if (!user) throw { status: 401, errors: { auth: ['required'] } };
+
+        const newComment = {
+          id: 'c-' + Date.now(),
+          articleSlug: slug,
+          body,
+          createdAt: new Date().toISOString(),
+          authorUsername: user.username
+        };
+
+        db.comments.push(newComment);
+        saveDB(db);
+        return {
+          id: newComment.id,
+          body: newComment.body,
+          createdAt: newComment.createdAt,
+          author: {
+            username: user.username,
+            bio: user.bio,
+            image: user.image,
+            following: false
+          }
+        };
+      },
+      deleteComment(commentId, currentUserId) {
+        const db = loadDB();
+        const commentIndex = db.comments.findIndex(c => c.id === commentId);
+        if (commentIndex === -1) return true;
+
+        const user = db.users.find(u => u.id === currentUserId);
+        if (!user || user.username !== db.comments[commentIndex].authorUsername) {
+          throw { status: 403, errors: { auth: ['unauthorized'] } };
+        }
+
+        db.comments.splice(commentIndex, 1);
+        saveDB(db);
+        return true;
+      }
+    };
+
+    // --- AUTH CONTEXT & CLIENT STATE ---
+    const AuthContext = createContext();
+
+    function AuthProvider({ children }) {
+      const [authUser, setAuthUser] = useState(() => {
+        try {
+          const raw = localStorage.getItem(JWT_KEY);
+          if (raw) {
+            const userObj = JSON.parse(atob(raw));
+            const verified = API.getCurrentUser(userObj.token);
+            if (verified) return verified;
+          }
+        } catch (e) {
+          console.warn('Invalid auth token', e);
+        }
+        return null;
+      });
+
+      const isAuth = !!authUser;
+
+      const login = (user) => {
+        setAuthUser(user);
+        localStorage.setItem(JWT_KEY, btoa(JSON.stringify(user)));
+      };
+
+      const logout = () => {
+        setAuthUser(null);
+        localStorage.removeItem(JWT_KEY);
+      };
+
+      const updateUser = (data) => {
+        if (!authUser) return;
+        const updated = API.updateUser(authUser.token, data);
+        setAuthUser(updated);
+        localStorage.setItem(JWT_KEY, btoa(JSON.stringify(updated)));
+        return updated;
+      };
+
+      return (
+        <AuthContext.Provider value={{ authUser, isAuth, login, logout, updateUser }}>
+          {children}
+        </AuthContext.Provider>
+      );
+    }
+
+    function useAuth() {
+      return useContext(AuthContext);
+    }
+
+    // --- HASH ROUTER HOOK ---
+    function useRouter() {
+      const [hash, setHash] = useState(() => window.location.hash || '#/');
+
+      useEffect(() => {
+        const onHashChange = () => setHash(window.location.hash || '#/');
+        window.addEventListener('hashchange', onHashChange);
+        return () => window.removeEventListener('hashchange', onHashChange);
+      }, []);
+
+      const navigate = (path) => {
+        if (!path.startsWith('#')) {
+          path = '#' + (path.startsWith('/') ? path : '/' + path);
+        }
+        window.location.hash = path;
+      };
+
+      const route = hash.replace(/^#/, '') || '/';
+      return { route, navigate };
+    }
+
+    // --- SHARED UI COMPONENTS ---
+
+    function Navbar({ currentRoute, navigate }) {
+      const { isAuth, authUser } = useAuth();
+
+      return (
+        <nav className="navbar navbar-light">
+          <div className="container">
+            <a
+              className="navbar-brand"
+              href="#/"
+              onClick={(e) => { e.preventDefault(); navigate('/'); }}
+            >
+              conduit
+            </a>
+            <ul className="nav navbar-nav pull-xs-right">
+              <li className="nav-item">
+                <a
+                  className={`nav-link ${currentRoute === '/' ? 'active' : ''}`}
+                  href="#/"
+                  onClick={(e) => { e.preventDefault(); navigate('/'); }}
+                >
+                  Home
+                </a>
+              </li>
+              {isAuth ? (
+                <>
+                  <li className="nav-item">
+                    <a
+                      className={`nav-link ${currentRoute === '/editor' ? 'active' : ''}`}
+                      href="#/editor"
+                      onClick={(e) => { e.preventDefault(); navigate('/editor'); }}
+                    >
+                      <i className="ion-compose" /> &nbsp;New Post
+                    </a>
+                  </li>
+                  <li className="nav-item">
+                    <a
+                      className={`nav-link ${currentRoute === '/settings' ? 'active' : ''}`}
+                      href="#/settings"
+                      onClick={(e) => { e.preventDefault(); navigate('/settings'); }}
+                    >
+                      <i className="ion-gear-a" /> &nbsp;Settings
+                    </a>
+                  </li>
+                  <li className="nav-item">
+                    <a
+                      className={`nav-link ${currentRoute.startsWith(`/@${authUser?.username}`) ? 'active' : ''}`}
+                      href={`#/@${authUser?.username}`}
+                      onClick={(e) => { e.preventDefault(); navigate(`/@${authUser?.username}`); }}
+                    >
+                      <img
+                        style={{ width: 24, height: 24, marginRight: 4, borderRadius: '50%', objectFit: 'cover' }}
+                        src={authUser?.image || 'https://api.realworld.io/images/smiley-cyrus.jpeg'}
+                        alt={authUser?.username}
+                      />
+                      {authUser?.username}
+                    </a>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li className="nav-item">
+                    <a
+                      className={`nav-link ${currentRoute === '/login' ? 'active' : ''}`}
+                      href="#/login"
+                      onClick={(e) => { e.preventDefault(); navigate('/login'); }}
+                    >
+                      Sign in
+                    </a>
+                  </li>
+                  <li className="nav-item">
+                    <a
+                      className={`nav-link ${currentRoute === '/register' ? 'active' : ''}`}
+                      href="#/register"
+                      onClick={(e) => { e.preventDefault(); navigate('/register'); }}
+                    >
+                      Sign up
+                    </a>
+                  </li>
+                </>
+              )}
+            </ul>
+          </div>
+        </nav>
+      );
+    }
+
+    function FormErrors({ errors }) {
+      if (!errors || Object.keys(errors).length === 0) return null;
+      return (
+        <ul className="error-messages">
+          {Object.entries(errors).map(([key, messages]) =>
+            (Array.isArray(messages) ? messages : [messages]).map((msg, idx) => (
+              <li key={`${key}-${idx}`}>
+                {key} {msg}
+              </li>
+            ))
+          )}
+        </ul>
+      );
+    }
+
+    function FavoriteArticleButton({ article, onToggle, className = '', children }) {
+      const { isAuth } = useAuth();
+      const [loading, setLoading] = useState(false);
+
+      const handleClick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isAuth) {
+          window.location.hash = '#/login';
+          return;
+        }
+        setLoading(true);
+        try {
+          await onToggle(article.slug, !article.favorited);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const isFav = article.favorited;
+
+      return (
+        <button
+          type="button"
+          disabled={loading}
+          className={`btn btn-sm ${isFav ? 'btn-primary' : 'btn-outline-primary'} ${className}`}
+          onClick={handleClick}
+        >
+          <i className="ion-heart" />
+          {children ? children : <span> &nbsp;{article.favoritesCount}</span>}
+        </button>
+      );
+    }
+
+    function FollowButton({ profile, onToggle, disabled }) {
+      const { isAuth } = useAuth();
+
+      const handleClick = (e) => {
+        e.preventDefault();
+        if (!isAuth) {
+          window.location.hash = '#/login';
+          return;
+        }
+        onToggle(profile.username, !profile.following);
+      };
+
+      const isFollowing = profile.following;
+
+      return (
+        <button
+          disabled={disabled}
+          onClick={handleClick}
+          type="button"
+          className={`btn btn-sm action-btn ${isFollowing ? 'btn-secondary' : 'btn-outline-secondary'}`}
+        >
+          <i className={isFollowing ? 'ion-minus-round' : 'ion-plus-round'} />
+          &nbsp; {isFollowing ? 'Unfollow' : 'Follow'} {profile.username}
+        </button>
+      );
+    }
+
+    function ArticlePreview({ article, navigate, onFavoriteToggle }) {
+      return (
+        <div className="article-preview">
+          <div className="article-meta">
+            <a
+              href={`#/@${article.author?.username}`}
+              onClick={(e) => { e.preventDefault(); navigate(`/@${article.author?.username}`); }}
+            >
+              <img src={article.author?.image || 'https://api.realworld.io/images/smiley-cyrus.jpeg'} className="custom-avatar" alt="" />
+            </a>
+            <div className="info">
+              <a
+                href={`#/@${article.author?.username}`}
+                className="author"
+                onClick={(e) => { e.preventDefault(); navigate(`/@${article.author?.username}`); }}
+              >
+                {article.author?.username}
+              </a>
+              <span className="date">{new Date(article.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+            <FavoriteArticleButton
+              className="pull-xs-right"
+              article={article}
+              onToggle={onFavoriteToggle}
+            />
+          </div>
+          <a
+            href={`#/article/${article.slug}`}
+            className="preview-link"
+            onClick={(e) => { e.preventDefault(); navigate(`/article/${article.slug}`); }}
+          >
+            <h1>{article.title}</h1>
+            <p>{article.description}</p>
+            <span>Read more...</span>
+            <ul className="tag-list">
+              {(article.tagList || []).map((tag) => (
+                <li key={tag} className="tag-default tag-pill tag-outline">
+                  {tag}
+                </li>
+              ))}
+            </ul>
+          </a>
+        </div>
+      );
+    }
+
+    function ArticleList({ filters, refreshKey, navigate, onFavoriteToggle }) {
+      const { authUser } = useAuth();
+      const [articles, setArticles] = useState([]);
+      const [articlesCount, setArticlesCount] = useState(0);
+      const [loading, setLoading] = useState(true);
+      const [offset, setOffset] = useState(0);
+      const limit = 10;
+
+      useEffect(() => {
+        setOffset(0);
+      }, [filters]);
+
+      const fetchArticles = useCallback(() => {
+        setLoading(true);
+        try {
+          const res = API.getArticles({ ...filters, offset, limit }, authUser?.id);
+          setArticles(res.articles);
+          setArticlesCount(res.articlesCount);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      }, [filters, offset, authUser?.id, refreshKey]);
+
+      useEffect(() => {
+        fetchArticles();
+      }, [fetchArticles]);
+
+      const handleFav = async (slug, nextFavState) => {
+        try {
+          const updated = API.toggleFavoriteArticle(slug, authUser.id, nextFavState);
+          setArticles(prev => prev.map(a => a.slug === slug ? updated : a));
+          if (onFavoriteToggle) onFavoriteToggle();
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      const pages = Math.ceil(articlesCount / limit);
+
+      if (loading) return <div className="article-preview">Loading articles...</div>;
+      if (articles.length === 0) return <div className="article-preview">No articles are here... yet.</div>;
+
+      return (
+        <>
+          {articles.map((art) => (
+            <ArticlePreview
+              key={art.slug}
+              article={art}
+              navigate={navigate}
+              onFavoriteToggle={handleFav}
+            />
+          ))}
+          {pages > 1 && (
+            <nav>
+              <ul className="pagination">
+                {Array.from({ length: pages }, (_, i) => (
+                  <li className={`page-item ${offset === i * limit ? 'active' : ''}`} key={i}>
+                    <button type="button" className="page-link" onClick={() => setOffset(i * limit)}>
+                      {i + 1}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+        </>
+      );
+    }
+
+    function PopularTags({ onTagClick }) {
+      const [tags, setTags] = useState([]);
+
+      useEffect(() => {
+        setTags(API.getTags());
+      }, []);
+
+      return (
+        <div className="sidebar">
+          <p>Popular Tags</p>
+          <div className="tag-list">
+            {tags.map((tag) => (
+              <a
+                href={`#/tag/${tag}`}
+                key={tag}
+                className="tag-pill tag-default"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onTagClick(tag);
+                }}
+              >
+                {tag}
+              </a>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function TagsInput({ tags, onChange }) {
+      const [inputValue, setInputValue] = useState('');
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const clean = inputValue.trim();
+          if (clean && !tags.includes(clean)) {
+            onChange([...tags, clean]);
+            setInputValue('');
+          }
+        }
+      };
+
+      const removeTag = (tagToRemove) => {
+        onChange(tags.filter(t => t !== tagToRemove));
+      };
+
+      return (
+        <>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Enter tags and press Enter"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <div className="tag-list" style={{ marginTop: '8px' }}>
+            {tags.map((tag) => (
+              <span key={tag} className="tag-default tag-pill" style={{ marginRight: '5px', display: 'inline-block' }}>
+                <i className="ion-close-round" onClick={() => removeTag(tag)} />
+                &nbsp;{tag}
+              </span>
+            ))}
+          </div>
+        </>
+      );
+    }
+
+    // --- PAGES ---
+
+    // 1. HOME PAGE
+    function HomePage({ navigate }) {
+      const { isAuth } = useAuth();
+      const [tab, setTab] = useState(isAuth ? 'feed' : 'global');
+      const [activeTag, setActiveTag] = useState(null);
+      const [refreshCount, setRefreshCount] = useState(0);
+
+      useEffect(() => {
+        if (!isAuth && tab === 'feed') {
+          setTab('global');
+        }
+      }, [isAuth, tab]);
+
+      const filters = useMemo(() => {
+        if (activeTag) return { tag: activeTag };
+        if (tab === 'feed') return { feed: true };
+        return {};
+      }, [tab, activeTag]);
+
+      const onTagClick = (tag) => {
+        setActiveTag(tag);
+        setTab('tag');
+      };
+
+      const onGlobalFeedClick = () => {
+        setActiveTag(null);
+        setTab('global');
+      };
+
+      const onFeedClick = () => {
+        setActiveTag(null);
+        setTab('feed');
+      };
+
+      return (
+        <div className="home-page">
+          <div className="banner">
+            <div className="container">
+              <h1 className="logo-font">conduit</h1>
+              <p>A place to share your knowledge. <span className="demo-badge">Vite + React Standalone</span></p>
+            </div>
+          </div>
+          <div className="container page">
+            <div className="row">
+              <div className="col-md-9">
+                <div className="feed-toggle">
+                  <ul className="nav nav-pills outline-active">
+                    {isAuth && (
+                      <li className="nav-item">
+                        <button
+                          type="button"
+                          className={`nav-link ${tab === 'feed' && !activeTag ? 'active' : ''}`}
+                          onClick={onFeedClick}
+                        >
+                          Your Feed
+                        </button>
+                      </li>
+                    )}
+                    <li className="nav-item">
+                      <button
+                        type="button"
+                        className={`nav-link ${tab === 'global' && !activeTag ? 'active' : ''}`}
+                        onClick={onGlobalFeedClick}
+                      >
+                        Global Feed
+                      </button>
+                    </li>
+                    {activeTag && (
+                      <li className="nav-item">
+                        <a className="nav-link active" href="#/" onClick={(e) => e.preventDefault()}>
+                          # {activeTag}
+                        </a>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+                <ArticleList
+                  filters={filters}
+                  refreshKey={refreshCount}
+                  navigate={navigate}
+                  onFavoriteToggle={() => setRefreshCount(c => c + 1)}
+                />
+              </div>
+              <div className="col-md-3">
+                <PopularTags onTagClick={onTagClick} />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 2. AUTH PAGE (LOGIN / REGISTER)
+    function AuthPage({ isRegister, navigate }) {
+      const { login } = useAuth();
+      const [username, setUsername] = useState('');
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [errors, setErrors] = useState({});
+      const [submitting, setSubmitting] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setErrors({});
+        setSubmitting(true);
+        try {
+          if (isRegister) {
+            if (!username.trim()) throw { errors: { username: ["can't be blank"] } };
+            if (!email.trim()) throw { errors: { email: ["can't be blank"] } };
+            if (!password) throw { errors: { password: ["can't be blank"] } };
+            const user = API.register(username.trim(), email.trim(), password);
+            login(user);
+          } else {
+            if (!email.trim()) throw { errors: { email: ["can't be blank"] } };
+            if (!password) throw { errors: { password: ["can't be blank"] } };
+            const user = API.login(email.trim(), password);
+            login(user);
+          }
+          navigate('/');
+        } catch (err) {
+          if (err.errors) {
+            setErrors(err.errors);
+          } else {
+            setErrors({ general: ['An unexpected error occurred'] });
+          }
+        } finally {
+          setSubmitting(false);
+        }
+      };
+
+      const handleQuickDemoLogin = () => {
+        const user = API.login('test@test.com', 'password');
+        login(user);
+        navigate('/');
+      };
+
+      return (
+        <div className="auth-page">
+          <div className="container page">
+            <div className="row">
+              <div className="col-md-6 offset-md-3 col-xs-12">
+                <h1 className="text-xs-center">Sign {isRegister ? 'up' : 'in'}</h1>
+                <p className="text-xs-center">
+                  <a
+                    href={isRegister ? '#/login' : '#/register'}
+                    onClick={(e) => { e.preventDefault(); navigate(isRegister ? '/login' : '/register'); }}
+                  >
+                    {isRegister ? 'Have an account?' : 'Need an account?'}
+                  </a>
+                </p>
+
+                <div className="auth-banner-hint">
+                  <strong>💡 Quick Demo Access:</strong> Test user is pre-configured.
+                  <button
+                    type="button"
+                    onClick={handleQuickDemoLogin}
+                    className="btn btn-sm btn-secondary pull-xs-right"
+                    style={{ marginTop: '-4px' }}
+                  >
+                    Instant Demo Login
+                  </button>
+                </div>
+
+                <FormErrors errors={errors} />
+
+                <form onSubmit={handleSubmit}>
+                  {isRegister && (
+                    <fieldset className="form-group">
+                      <input
+                        type="text"
+                        className="form-control form-control-lg"
+                        placeholder="Your Name"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        disabled={submitting}
+                      />
+                    </fieldset>
+                  )}
+                  <fieldset className="form-group">
+                    <input
+                      type="email"
+                      className="form-control form-control-lg"
+                      placeholder="Email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={submitting}
+                    />
+                  </fieldset>
+                  <fieldset className="form-group">
+                    <input
+                      type="password"
+                      className="form-control form-control-lg"
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={submitting}
+                    />
+                  </fieldset>
+                  <button
+                    disabled={submitting}
+                    type="submit"
+                    className="btn btn-lg btn-primary pull-xs-right"
+                  >
+                    Sign {isRegister ? 'up' : 'in'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 3. SETTINGS PAGE
+    function SettingsPage({ navigate }) {
+      const { authUser, updateUser, logout } = useAuth();
+      const [formData, setFormData] = useState({
+        image: authUser?.image || '',
+        username: authUser?.username || '',
+        bio: authUser?.bio || '',
+        email: authUser?.email || '',
+        password: ''
+      });
+      const [errors, setErrors] = useState({});
+      const [submitting, setSubmitting] = useState(false);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setErrors({});
+        setSubmitting(true);
+        try {
+          const payload = { ...formData };
+          if (!payload.password) delete payload.password;
+          const updated = updateUser(payload);
+          navigate(`/@${updated.username}`);
+        } catch (err) {
+          if (err.errors) setErrors(err.errors);
+        } finally {
+          setSubmitting(false);
+        }
+      };
+
+      const handleLogout = () => {
+        logout();
+        navigate('/');
+      };
+
+      return (
+        <div className="settings-page">
+          <div className="container page">
+            <div className="row">
+              <div className="col-md-6 offset-md-3 col-xs-12">
+                <h1 className="text-xs-center">Your Settings</h1>
+
+                <FormErrors errors={errors} />
+
+                <form onSubmit={handleSubmit}>
+                  <fieldset disabled={submitting}>
+                    <fieldset className="form-group">
+                      <input
+                        className="form-control"
+                        type="text"
+                        placeholder="URL of profile picture"
+                        value={formData.image}
+                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                      />
+                    </fieldset>
+                    <fieldset className="form-group">
+                      <input
+                        className="form-control form-control-lg"
+                        type="text"
+                        placeholder="Your Name"
+                        value={formData.username}
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      />
+                    </fieldset>
+                    <fieldset className="form-group">
+                      <textarea
+                        className="form-control form-control-lg"
+                        rows="8"
+                        placeholder="Short bio about you"
+                        value={formData.bio}
+                        onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                      />
+                    </fieldset>
+                    <fieldset className="form-group">
+                      <input
+                        className="form-control form-control-lg"
+                        type="email"
+                        placeholder="Email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </fieldset>
+                    <fieldset className="form-group">
+                      <input
+                        className="form-control form-control-lg"
+                        type="password"
+                        placeholder="New Password (optional)"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      />
+                    </fieldset>
+                    <button type="submit" className="btn btn-lg btn-primary pull-xs-right">
+                      Update Settings
+                    </button>
+                  </fieldset>
+                </form>
+                <hr style={{ clear: 'both', margin: '30px 0' }} />
+                <button onClick={handleLogout} type="button" className="btn btn-outline-danger">
+                  Or click here to logout.
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 4. EDITOR PAGE (CREATE / EDIT)
+    function EditorPage({ slug, navigate }) {
+      const { authUser } = useAuth();
+      const [title, setTitle] = useState('');
+      const [description, setDescription] = useState('');
+      const [body, setBody] = useState('');
+      const [tagList, setTagList] = useState([]);
+      const [errors, setErrors] = useState({});
+      const [submitting, setSubmitting] = useState(false);
+      const [loading, setLoading] = useState(!!slug);
+
+      useEffect(() => {
+        if (slug) {
+          try {
+            const art = API.getArticle(slug, authUser?.id);
+            setTitle(art.title);
+            setDescription(art.description);
+            setBody(art.body);
+            setTagList(art.tagList || []);
+          } catch (e) {
+            console.error(e);
+            navigate('/');
+          } finally {
+            setLoading(false);
+          }
+        }
+      }, [slug, authUser?.id, navigate]);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setErrors({});
+        setSubmitting(true);
+        try {
+          if (!title.trim()) throw { errors: { title: ["can't be blank"] } };
+          if (!description.trim()) throw { errors: { description: ["can't be blank"] } };
+          if (!body.trim()) throw { errors: { body: ["can't be blank"] } };
+
+          let articleResult;
+          if (slug) {
+            articleResult = API.updateArticle(slug, { title, description, body, tagList }, authUser.id);
+          } else {
+            articleResult = API.createArticle({ title, description, body, tagList }, authUser.id);
+          }
+          navigate(`/article/${articleResult.slug}`);
+        } catch (err) {
+          if (err.errors) setErrors(err.errors);
+        } finally {
+          setSubmitting(false);
+        }
+      };
+
+      if (loading) {
+        return <div className="container page"><p>Loading editor...</p></div>;
+      }
+
+      return (
+        <div className="editor-page">
+          <div className="container page">
+            <div className="row">
+              <div className="col-md-10 offset-md-1 col-xs-12">
+                <FormErrors errors={errors} />
+
+                <form onSubmit={handleSubmit}>
+                  <fieldset disabled={submitting}>
+                    <fieldset className="form-group">
+                      <input
+                        type="text"
+                        className="form-control form-control-lg"
+                        placeholder="Article Title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                      />
+                    </fieldset>
+                    <fieldset className="form-group">
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="What's this article about?"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                      />
+                    </fieldset>
+                    <fieldset className="form-group">
+                      <textarea
+                        className="form-control"
+                        rows="8"
+                        placeholder="Write your article (in markdown or plain text)"
+                        value={body}
+                        onChange={(e) => setBody(e.target.value)}
+                      />
+                    </fieldset>
+                    <fieldset className="form-group">
+                      <TagsInput tags={tagList} onChange={setTagList} />
+                    </fieldset>
+                    <button className="btn btn-lg pull-xs-right btn-primary" type="submit">
+                      Publish Article
+                    </button>
+                  </fieldset>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 5. ARTICLE DETAIL PAGE
+    function ArticlePage({ slug, navigate }) {
+      const { authUser, isAuth } = useAuth();
+      const [article, setArticle] = useState(null);
+      const [comments, setComments] = useState([]);
+      const [newCommentBody, setNewCommentBody] = useState('');
+      const [loading, setLoading] = useState(true);
+      const [submittingComment, setSubmittingComment] = useState(false);
+
+      const loadArticleData = useCallback(() => {
+        try {
+          const art = API.getArticle(slug, authUser?.id);
+          const comms = API.getComments(slug);
+          setArticle(art);
+          setComments(comms);
+        } catch (e) {
+          console.error(e);
+          navigate('/');
+        } finally {
+          setLoading(false);
+        }
+      }, [slug, authUser?.id, navigate]);
+
+      useEffect(() => {
+        loadArticleData();
+      }, [loadArticleData]);
+
+      const handleToggleFavorite = () => {
+        if (!isAuth) {
+          navigate('/login');
+          return;
+        }
+        const updated = API.toggleFavoriteArticle(slug, authUser.id, !article.favorited);
+        setArticle(updated);
+      };
+
+      const handleToggleFollow = (username, nextFollow) => {
+        if (!isAuth) {
+          navigate('/login');
+          return;
+        }
+        const updatedProfile = API.toggleFollowUser(username, authUser.id, nextFollow);
+        setArticle(prev => ({
+          ...prev,
+          author: { ...prev.author, following: updatedProfile.following }
+        }));
+      };
+
+      const handleDeleteArticle = () => {
+        if (window.confirm('Are you sure you want to delete this article?')) {
+          API.deleteArticle(slug, authUser.id);
+          navigate('/');
+        }
+      };
+
+      const handleAddComment = (e) => {
+        e.preventDefault();
+        if (!newCommentBody.trim()) return;
+        setSubmittingComment(true);
+        try {
+          const comment = API.addComment(slug, newCommentBody.trim(), authUser.id);
+          setComments([comment, ...comments]);
+          setNewCommentBody('');
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setSubmittingComment(false);
+        }
+      };
+
+      const handleDeleteComment = (commentId) => {
+        try {
+          API.deleteComment(commentId, authUser.id);
+          setComments(comments.filter(c => c.id !== commentId));
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      if (loading || !article) {
+        return <div className="container page"><p>Loading article...</p></div>;
+      }
+
+      const isAuthor = authUser?.username === article.author?.username;
+
+      const MetaButtons = () => (
+        <span>
+          {isAuthor ? (
+            <>
+              <a
+                className="btn btn-outline-secondary btn-sm"
+                href={`#/editor/${article.slug}`}
+                onClick={(e) => { e.preventDefault(); navigate(`/editor/${article.slug}`); }}
+              >
+                <i className="ion-edit" /> Edit Article
+              </a>
+              &nbsp;&nbsp;
+              <button
+                type="button"
+                className="btn btn-outline-danger btn-sm"
+                onClick={handleDeleteArticle}
+              >
+                <i className="ion-trash-a" /> Delete Article
+              </button>
+            </>
+          ) : (
+            <>
+              <FollowButton
+                profile={article.author}
+                onToggle={handleToggleFollow}
+              />
+              &nbsp;&nbsp;
+              <FavoriteArticleButton
+                article={article}
+                onToggle={handleToggleFavorite}
+              >
+                &nbsp; {article.favorited ? 'Unfavorite' : 'Favorite'} Article <span className="counter">({article.favoritesCount})</span>
+              </FavoriteArticleButton>
+            </>
+          )}
+        </span>
+      );
+
+      return (
+        <div className="article-page">
+          <div className="banner">
+            <div className="container">
+              <h1>{article.title}</h1>
+              <div className="article-meta">
+                <a
+                  href={`#/@${article.author?.username}`}
+                  onClick={(e) => { e.preventDefault(); navigate(`/@${article.author?.username}`); }}
+                >
+                  <img src={article.author?.image || 'https://api.realworld.io/images/smiley-cyrus.jpeg'} className="custom-avatar" alt="" />
+                </a>
+                <div className="info">
+                  <a
+                    href={`#/@${article.author?.username}`}
+                    className="author"
+                    onClick={(e) => { e.preventDefault(); navigate(`/@${article.author?.username}`); }}
+                  >
+                    {article.author?.username}
+                  </a>
+                  <span className="date">{new Date(article.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+                <MetaButtons />
+              </div>
+            </div>
+          </div>
+
+          <div className="container page">
+            <div className="row article-content">
+              <div className="col-md-12">
+                <p className="lead" style={{ fontWeight: 400, color: '#555' }}>{article.description}</p>
+                <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.8', fontSize: '1.15rem' }}>
+                  {article.body}
+                </div>
+                <ul className="tag-list" style={{ marginTop: '25px' }}>
+                  {(article.tagList || []).map((tag) => (
+                    <li key={tag} className="tag-default tag-pill tag-outline">
+                      {tag}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <hr />
+
+            <div className="article-actions">
+              <div className="article-meta">
+                <a
+                  href={`#/@${article.author?.username}`}
+                  onClick={(e) => { e.preventDefault(); navigate(`/@${article.author?.username}`); }}
+                >
+                  <img src={article.author?.image || 'https://api.realworld.io/images/smiley-cyrus.jpeg'} className="custom-avatar" alt="" />
+                </a>
+                <div className="info">
+                  <a
+                    href={`#/@${article.author?.username}`}
+                    className="author"
+                    onClick={(e) => { e.preventDefault(); navigate(`/@${article.author?.username}`); }}
+                  >
+                    {article.author?.username}
+                  </a>
+                  <span className="date">{new Date(article.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+                <MetaButtons />
+              </div>
+            </div>
+
+            <div className="row">
+              <div className="col-xs-12 col-md-8 offset-md-2">
+                {isAuth ? (
+                  <form className="card comment-form" onSubmit={handleAddComment}>
+                    <div className="card-block">
+                      <textarea
+                        required
+                        className="form-control"
+                        placeholder="Write a comment..."
+                        rows="3"
+                        value={newCommentBody}
+                        onChange={(e) => setNewCommentBody(e.target.value)}
+                        disabled={submittingComment}
+                      />
+                    </div>
+                    <div className="card-footer">
+                      <img
+                        src={authUser?.image || 'https://api.realworld.io/images/smiley-cyrus.jpeg'}
+                        className="comment-author-img"
+                        alt=""
+                      />
+                      <button disabled={submittingComment} type="submit" className="btn btn-sm btn-primary">
+                        Post Comment
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <p>
+                    <a href="#/login" onClick={(e) => { e.preventDefault(); navigate('/login'); }}>Sign in</a> or <a href="#/register" onClick={(e) => { e.preventDefault(); navigate('/register'); }}>sign up</a> to add comments on this article.
+                  </p>
+                )}
+
+                {comments.map((comment) => (
+                  <div key={comment.id} className="card">
+                    <div className="card-block">
+                      <p className="card-text">{comment.body}</p>
+                    </div>
+                    <div className="card-footer">
+                      <a
+                        href={`#/@${comment.author?.username}`}
+                        className="comment-author"
+                        onClick={(e) => { e.preventDefault(); navigate(`/@${comment.author?.username}`); }}
+                      >
+                        <img
+                          src={comment.author?.image || 'https://api.realworld.io/images/smiley-cyrus.jpeg'}
+                          className="comment-author-img"
+                          alt=""
+                        />
+                      </a>
+                      &nbsp;
+                      <a
+                        href={`#/@${comment.author?.username}`}
+                        className="comment-author"
+                        onClick={(e) => { e.preventDefault(); navigate(`/@${comment.author?.username}`); }}
+                      >
+                        {comment.author?.username}
+                      </a>
+                      <span className="date-posted">{new Date(comment.createdAt).toDateString()}</span>
+                      {authUser?.username === comment.author?.username && (
+                        <span className="mod-options pull-xs-right">
+                          <i
+                            className="ion-trash-a"
+                            style={{ cursor: 'pointer', color: '#999' }}
+                            onClick={() => handleDeleteComment(comment.id)}
+                          />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 6. PROFILE PAGE
+    function ProfilePage({ username, navigate }) {
+      const { authUser, isAuth } = useAuth();
+      const [profile, setProfile] = useState(null);
+      const [tab, setTab] = useState('author'); // 'author' or 'favorited'
+      const [loading, setLoading] = useState(true);
+      const [refreshCount, setRefreshCount] = useState(0);
+
+      const loadProfile = useCallback(() => {
+        try {
+          const prof = API.getProfile(username, authUser?.id);
+          setProfile(prof);
+        } catch (e) {
+          console.error(e);
+          navigate('/');
+        } finally {
+          setLoading(false);
+        }
+      }, [username, authUser?.id, navigate]);
+
+      useEffect(() => {
+        loadProfile();
+      }, [loadProfile]);
+
+      const handleToggleFollow = (uname, nextFollow) => {
+        if (!isAuth) {
+          navigate('/login');
+          return;
+        }
+        const updated = API.toggleFollowUser(uname, authUser.id, nextFollow);
+        setProfile(updated);
+      };
+
+      const filters = useMemo(() => {
+        if (tab === 'favorited') return { favorited: username };
+        return { author: username };
+      }, [tab, username]);
+
+      if (loading || !profile) {
+        return <div className="container page"><p>Loading profile...</p></div>;
+      }
+
+      const isOwnProfile = authUser?.username === username;
+
+      return (
+        <div className="profile-page">
+          <div className="user-info">
+            <div className="container">
+              <div className="row">
+                <div className="col-xs-12 col-md-10 offset-md-1">
+                  <img
+                    src={profile.image || 'https://api.realworld.io/images/smiley-cyrus.jpeg'}
+                    className="user-img custom-avatar"
+                    alt={profile.username}
+                  />
+                  <h4>{profile.username}</h4>
+                  <p>{profile.bio || 'No bio available.'}</p>
+                  {isOwnProfile ? (
+                    <a
+                      className="btn btn-sm btn-outline-secondary action-btn"
+                      href="#/settings"
+                      onClick={(e) => { e.preventDefault(); navigate('/settings'); }}
+                    >
+                      <i className="ion-gear-a" /> Edit Profile Settings
+                    </a>
+                  ) : (
+                    <FollowButton
+                      profile={profile}
+                      onToggle={handleToggleFollow}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="container">
+            <div className="row">
+              <div className="col-xs-12 col-md-10 offset-md-1">
+                <div className="articles-toggle">
+                  <ul className="nav nav-pills outline-active">
+                    <li className="nav-item">
+                      <button
+                        type="button"
+                        className={`nav-link ${tab === 'author' ? 'active' : ''}`}
+                        onClick={() => setTab('author')}
+                      >
+                        My Articles
+                      </button>
+                    </li>
+                    <li className="nav-item">
+                      <button
+                        type="button"
+                        className={`nav-link ${tab === 'favorited' ? 'active' : ''}`}
+                        onClick={() => setTab('favorited')}
+                      >
+                        Favorited Articles
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+                <ArticleList
+                  filters={filters}
+                  refreshKey={refreshCount}
+                  navigate={navigate}
+                  onFavoriteToggle={() => setRefreshCount(c => c + 1)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- MAIN APP ROUTER DISPATCHER ---
+    function App() {
+      const { route, navigate } = useRouter();
+      const { isAuth } = useAuth();
+
+      // Simple route matcher
+      let content = null;
+
+      if (route === '/' || route === '') {
+        content = <HomePage navigate={navigate} />;
+      } else if (route === '/login') {
+        content = isAuth ? <HomePage navigate={navigate} /> : <AuthPage isRegister={false} navigate={navigate} />;
+      } else if (route === '/register') {
+        content = isAuth ? <HomePage navigate={navigate} /> : <AuthPage isRegister={true} navigate={navigate} />;
+      } else if (route === '/settings') {
+        content = isAuth ? <SettingsPage navigate={navigate} /> : <AuthPage isRegister={false} navigate={navigate} />;
+      } else if (route === '/editor') {
+        content = isAuth ? <EditorPage navigate={navigate} /> : <AuthPage isRegister={false} navigate={navigate} />;
+      } else if (route.startsWith('/editor/')) {
+        const slug = route.replace('/editor/', '');
+        content = isAuth ? <EditorPage slug={slug} navigate={navigate} /> : <AuthPage isRegister={false} navigate={navigate} />;
+      } else if (route.startsWith('/article/')) {
+        const slug = route.replace('/article/', '');
+        content = <ArticlePage slug={slug} navigate={navigate} />;
+      } else if (route.startsWith('/@') || route.startsWith('/profile/')) {
+        const username = route.startsWith('/@') ? route.replace('/@', '') : route.replace('/profile/', '');
+        content = <ProfilePage username={username} navigate={navigate} />;
+      } else {
+        content = <HomePage navigate={navigate} />;
+      }
+
+      return (
+        <>
+          <header>
+            <Navbar currentRoute={route} navigate={navigate} />
+          </header>
+          <main>
+            {content}
+          </main>
+          <footer>
+            <div className="container">
+              <a href="#/" className="logo-font" onClick={(e) => { e.preventDefault(); navigate('/'); }}>
+                conduit
+              </a>
+              <span className="attribution">
+                An interactive learning project from <a href="https://thinkster.io" target="_blank" rel="noreferrer">Thinkster</a>. Code &amp; design
+                licensed under MIT. RealWorld React compiled client bundle.
+              </span>
+            </div>
+          </footer>
+        </>
+      );
+    }
+
+    // --- RENDER IN DOM ---
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    );
+  </script>
+</body>
+</html>
